@@ -20,6 +20,7 @@ var board = new five.Board( { io: new Tessel() });
 
 board.on('ready', function() {
    var led = new five.Led('a5');
+   var rotary = new five.Sensor('a4');
 
    var mqttClient  = mqtt.connect(settings.mqttURL);
    // filter variables
@@ -32,8 +33,8 @@ board.on('ready', function() {
    mqttClient.on('connect', function () {
       console.log('connected to MQTT Broker at ' + settings.mqttURL);
       mqttClient.subscribe(setTopicWC);
-      mqttClient.publish(getFilterTopic, filterConstant.toString());
-      mqttClient.publish(getLedTopic, ledValue.toString());
+      mqttClient.publish(getFilterTopic, filterConstant.toString(), settings.mqttPubOptions);
+      mqttClient.publish(getLedTopic, ledValue.toString(), settings.mqttPubOptions);
    });
 
    mqttClient.on('message', function (topic, message) {
@@ -45,7 +46,7 @@ board.on('ready', function() {
                else if (fcSet > 1.0) { fcSet = 1.0; } // clip @ 1.0
                filterConstant = fcSet;
                console.log('Setting filter constant to: ' + filterConstant);
-               mqttClient.publish(getFilterTopic, filterConstant.toString());
+               mqttClient.publish(getFilterTopic, filterConstant.toString(), settings.mqttPubOptions);
             }
             break;
          case setLedTopic:
@@ -57,14 +58,12 @@ board.on('ready', function() {
                var ledCounts = Math.round(255 * ledValue * 0.01);
                console.log('Setting LED value to: ' + ledCounts);
                led.brightness(ledCounts);
-               mqttClient.publish(getLedTopic, ledValue.toString());
+               mqttClient.publish(getLedTopic, ledValue.toString(), settings.mqttPubOptions);
             }
             break;
       }
 
    });
-
-   var rotary = new five.Sensor('a4');
 
    rotary.on('change', function() {
       var scaledValue = this.value / 1023 * 100; // scale from 0 - 100
@@ -73,7 +72,7 @@ board.on('ready', function() {
          var displayValue = Math.round(filteredValue);
          if (displayValue != prevDisplayValue) {
             console.log('Raw value: ' + scaledValue.toString() + '  Filtered value: ' + displayValue.toString());
-            mqttClient.publish(getPotTopic, displayValue.toString());
+            mqttClient.publish(getPotTopic, displayValue.toString(), settings.mqttPubOptions);
          }
          prevDisplayValue = displayValue;
       }
